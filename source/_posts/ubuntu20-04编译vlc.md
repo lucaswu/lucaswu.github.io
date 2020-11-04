@@ -166,3 +166,9 @@ No package 'Qt5Svg' found. If you want to build VLC without GUI, pass --disable-
 ```shell
 $ apt-get install libqt5quickcontrols2-5 libqt5svg5
 ```
+&nbsp;&nbsp;&nbsp;&nbsp;解决了以上问题，终于可以：
+ ```shell
+$ make 
+$ ./vlc test.mp4
+```
+&nbsp;&nbsp;&nbsp;&nbsp;应该就可以播放界面了。
