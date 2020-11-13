@@ -5,7 +5,7 @@ tags:
 ---
 
 &nbsp;&nbsp;&nbsp;&nbsp;给自己立了一个flag就是熟悉vlc，那熟悉的第一步就是源码编译vlc。弄了一个很干净的环境(docker最新的ubuntu镜像，ubuntu20.04)来记录自己编译vlc中遇到的问题。    
-
+<!--more-->
 &nbsp;&nbsp;&nbsp;&nbsp;一）源码下载    
 &nbsp;&nbsp;&nbsp;&nbsp;从[官网](https://www.videolan.org/vlc/download-sources.html)或者官方git上拉取代码(git://git.videolan.org/vlc.git)，或者github(https://github.com/videolan/vlc.git)上拉取代码
 ```shell

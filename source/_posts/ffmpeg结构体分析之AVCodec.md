@@ -5,6 +5,7 @@ tags:
 ---
 &nbsp;&nbsp;&nbsp;&nbsp;(在开始之前，说几句题外话。本来自己的flag是vlc代码分析，加上工作上也在ijkplayer中分析快手的LAS。看下对于播放器而言，对于软解，基本都是直接在ffmpeg基础上套了一层，所以自己还是来翻翻ffmpeg，先熟悉ffmpeg的源码。我下载版本为4.3.1的ffmpeg的源码)
 &nbsp;&nbsp;&nbsp;&nbsp;AVCodec是视(音)频编解码器对应的一个结构体，存储编解码器的相关信息，定义在libavcodec/codec.h文件中。先把源码贴出来：
+<!--more-->
 ```c
 typedef struct AVCodec {
     /**

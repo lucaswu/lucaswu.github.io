@@ -15,6 +15,7 @@ AVCodec * codec_list[] = {
 #include "libavcodec/codec_list.c"
 #endif
 ```
+<!--more-->
 &nbsp;&nbsp;&nbsp;&nbsp;显然是走到else分支，但是codec_list.c文件却没有找到。**最后发现竟然是在./configure的时候生成的。**    
 &nbsp;&nbsp;&nbsp;&nbsp;在configure文件中，搜到如下代码：
 ```shell
