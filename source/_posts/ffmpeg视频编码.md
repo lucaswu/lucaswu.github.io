@@ -10,4 +10,6 @@ tags:
 1. 通过编码器名字选择编码器：avcodec_find_encoder_by_name    
    例如：avcodec_find_encoder_by_name(“libx264”)。关于这个函数底层实现，我有迷惑的地方，{% post_link ffmpeg源码分析之codec-list 点击这里查看 %}。    
 2. 分配编码器的上下文：avcodec_alloc_context3    
-   这个函数返回的是AVCodecContext数据类型，关于AVCodecContext的分析，{% post_link ffmpeg结构体分析之AVCodecContext 点击这里查看 %}。
+   这个函数返回的是AVCodecContext数据类型，关于AVCodecContext的分析，{% post_link ffmpeg结构体分析之AVCodecContext 点击这里查看 %}。设置视频的宽高，码率，帧率，时间戳之类的信息。
+3. 打开编码器：avcodec_open2   
+   设置编解码器的AVCodecContext，检查AVCodecContext中的一些参数设置是否合理。在根据根据AVCodecContext来初始化编码器(调用AVCodec中的init函数)

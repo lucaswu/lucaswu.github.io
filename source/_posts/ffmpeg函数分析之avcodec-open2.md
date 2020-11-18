@@ -9,9 +9,10 @@ int  avcodec_open2(AVCodecContext *avctx, const AVCodec *codec, AVDictionary **o
 ```    
 - avctx：需要初始化的 AVCodecContext    
 - codec：输入的AVCodec
-- options：一些选项。例如使用libx264编码的时候，“preset”，“tune”等都可以通过该参数设置    
+- options：包含AVCodecContext和编解码器专用的字典
 <!--more-->  
-&nbsp;&nbsp;&nbsp;&nbsp;我们就具体看下这个函数的实现，代码很长，我就直接把贴出来，代码里加上自己理解的注释
+&nbsp;&nbsp;&nbsp;&nbsp;我们就具体看下这个函数的实现，代码很长，我就直接把贴出来，代码里加上自己理解的注释    
+
 ```c
 int attribute_align_arg avcodec_open2(AVCodecContext *avctx, const AVCodec *codec, AVDictionary **options)
 {
@@ -87,6 +88,7 @@ int attribute_align_arg avcodec_open2(AVCodecContext *avctx, const AVCodec *code
     } else {
         avctx->priv_data = NULL;
     }
+    //将输入的AVDictionary形式的选项设置到AVCodecContext
     if ((ret = av_opt_set_dict(avctx, &tmp)) < 0)
         goto free_and_end;
 
@@ -107,6 +109,7 @@ int attribute_align_arg avcodec_open2(AVCodecContext *avctx, const AVCodec *code
             goto free_and_end;
     }
 
+        //检查宽和高
     if ((avctx->coded_width || avctx->coded_height || avctx->width || avctx->height)
         && (  av_image_check_size2(avctx->coded_width, avctx->coded_height, avctx->max_pixels, AV_PIX_FMT_NONE, 0, avctx) < 0
            || av_image_check_size2(avctx->width,       avctx->height,       avctx->max_pixels, AV_PIX_FMT_NONE, 0, avctx) < 0)) {
@@ -114,6 +117,8 @@ int attribute_align_arg avcodec_open2(AVCodecContext *avctx, const AVCodec *code
         ff_set_dimensions(avctx, 0, 0);
     }
 
+
+    //检查宽高比
     if (avctx->width > 0 && avctx->height > 0) {
         if (av_image_check_sar(avctx->width, avctx->height,
                                avctx->sample_aspect_ratio) < 0) {
@@ -215,6 +220,7 @@ int attribute_align_arg avcodec_open2(AVCodecContext *avctx, const AVCodec *code
         avctx->lowres = avctx->codec->max_lowres;
     }
 
+    //如果是编码器检查输入参数
     if (av_codec_is_encoder(avctx->codec)) {
         int i;
 #if FF_API_CODED_FRAME
@@ -226,14 +232,16 @@ FF_DISABLE_DEPRECATION_WARNINGS
         }
 FF_ENABLE_DEPRECATION_WARNINGS
 #endif
-
+        //对于视频，检查帧的时间戳信息
         if (avctx->time_base.num <= 0 || avctx->time_base.den <= 0) {
             av_log(avctx, AV_LOG_ERROR, "The encoder timebase is not set.\n");
             ret = AVERROR(EINVAL);
             goto free_and_end;
         }
 
+        //对于音频，采样率是否符合要求
         if (avctx->codec->sample_fmts) {
+            //遍历编码器支持的所有采样率
             for (i = 0; avctx->codec->sample_fmts[i] != AV_SAMPLE_FMT_NONE; i++) {
                 if (avctx->sample_fmt == avctx->codec->sample_fmts[i])
                     break;
@@ -253,6 +261,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
                 goto free_and_end;
             }
         }
+        //检查像素格式
         if (avctx->codec->pix_fmts) {
             for (i = 0; avctx->codec->pix_fmts[i] != AV_PIX_FMT_NONE; i++)
                 if (avctx->pix_fmt == avctx->codec->pix_fmts[i])
@@ -274,6 +283,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
                 avctx->codec->pix_fmts[i] == AV_PIX_FMT_YUVJ444P)
                 avctx->color_range = AVCOL_RANGE_JPEG;
         }
+        //检查采样率
         if (avctx->codec->supported_samplerates) {
             for (i = 0; avctx->codec->supported_samplerates[i] != 0; i++)
                 if (avctx->sample_rate == avctx->codec->supported_samplerates[i])
@@ -291,6 +301,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
             ret = AVERROR(EINVAL);
             goto free_and_end;
         }
+        //检查声道布局
         if (avctx->codec->channel_layouts) {
             if (!avctx->channel_layout) {
                 av_log(avctx, AV_LOG_WARNING, "Channel layout not specified\n");
@@ -307,6 +318,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
                 }
             }
         }
+        //检查声道数
         if (avctx->channel_layout && avctx->channels) {
             int channels = av_get_channel_layout_nb_channels(avctx->channel_layout);
             if (channels != avctx->channels) {
@@ -327,20 +339,24 @@ FF_ENABLE_DEPRECATION_WARNINGS
             ret = AVERROR(EINVAL);
             goto free_and_end;
         }
+        
         if(avctx->codec_type == AVMEDIA_TYPE_VIDEO) {
             pixdesc = av_pix_fmt_desc_get(avctx->pix_fmt);
+            //检查视频数据比特数
             if (    avctx->bits_per_raw_sample < 0
                 || (avctx->bits_per_raw_sample > 8 && pixdesc->comp[0].depth <= 8)) {
                 av_log(avctx, AV_LOG_WARNING, "Specified bit depth %d not possible with the specified pixel formats depth %d\n",
                     avctx->bits_per_raw_sample, pixdesc->comp[0].depth);
                 avctx->bits_per_raw_sample = pixdesc->comp[0].depth;
             }
+            //检查宽高
             if (avctx->width <= 0 || avctx->height <= 0) {
                 av_log(avctx, AV_LOG_ERROR, "dimensions not set\n");
                 ret = AVERROR(EINVAL);
                 goto free_and_end;
             }
         }
+        //检查码率
         if (   (avctx->codec_type == AVMEDIA_TYPE_VIDEO || avctx->codec_type == AVMEDIA_TYPE_AUDIO)
             && avctx->bit_rate>0 && avctx->bit_rate<1000) {
             av_log(avctx, AV_LOG_WARNING, "Bitrate %"PRId64" is extremely low, maybe you mean %"PRId64"k\n", avctx->bit_rate, avctx->bit_rate);
@@ -394,6 +410,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
         avctx->export_side_data |= AV_CODEC_EXPORT_DATA_MVS;
     }
 
+    //所有检查无误后，调用编解码器初始化函数，根据AVCodecContext中的设置来初始化编码器
     if (   avctx->codec->init && (!(avctx->active_thread_type&FF_THREAD_FRAME)
         || avci->frame_thread_encoder)) {
         ret = avctx->codec->init(avctx);
@@ -405,7 +422,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
     }
 
     ret=0;
-
+    //解码器的参数大部分都是由系统自动设定而不是由用户设定，因而不怎么需要检查
     if (av_codec_is_decoder(avctx->codec)) {
         if (!avctx->bit_rate)
             avctx->bit_rate = get_bit_rate(avctx);
@@ -533,4 +550,12 @@ FF_ENABLE_DEPRECATION_WARNINGS
     goto end;
 }
 
-```  
+```     
+&nbsp;&nbsp;&nbsp;&nbsp;总结起来就是做了：    
+1. 为各种结构体分配内存
+2. 将输入的AVDictionary形式的选项设置到AVCodecContext
+3. 针对是否是音频，是否为编&解码器，做一些参数的检查
+4. 调用AVCodec中的init来初始化具体的编解码器
+
+**参考**    
+[1] [FFmpeg源代码简单分析：avcodec_open2()](https://blog.csdn.net/leixiaohua1020/article/details/44117891)
