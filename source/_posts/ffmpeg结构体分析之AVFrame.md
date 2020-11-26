@@ -3,7 +3,7 @@ title: ffmpeg结构体分析之AVFrame
 date: 2020-11-23 23:26:06
 tags:
 ---
-&nbsp;&nbsp;&nbsp;&nbsp;AVFrame结构中在<libavutil/fram.he>中定义，存储的是编码前或者解码后的原始数据，此外还包含了一些相关的信息。完成的定义如下：
+&nbsp;&nbsp;&nbsp;&nbsp;AVFrame结构中在<libavutil/frame.h>中定义，存储的是编码前或者解码后的原始数据，此外还包含了一些相关的信息。具体的定义如下：
 <!--more-->   
 ```C
 typedef struct AVFrame {
