@@ -62,3 +62,15 @@ typedef struct AVPacket {
 } AVPacket;
 
 ```
+* buf: 用来管理data指针引用的数据缓存，关于AVBufferRef {% post_link ffmpeg结构体分析之AVBuffer 点击这里查看 %}
+* pts: 显示时间，集合AVStream->time_base转换成时间戳
+* dts: 解码时间，结合AVStream->time_base转换成时间戳
+* data: 指向压缩数据的指针，AVPacket的实际数据
+* size: 压缩数据的大小
+* stream_index: packet在stream的index位置
+* flags: 标识，结合AV_PKT_FLAG使用
+* size_data: 容器可以提供的附加数据
+* size_data_elems: 附加信息元素个数
+* duration: 数据的时长，以所属流媒体的时间基准为单位
+* pos: 数据在流媒体中的偏移量
+  
