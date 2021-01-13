@@ -3,7 +3,7 @@ title: MySQL问题点点滴滴
 date: 2021-01-13 15:19:49
 tags:
 ---
-&nbsp;&nbsp;&nbsp;&nbsp;工作上遇到一些数据库的问题，现在把使用MySQL的问题都记录下来。~~(遥想上一次写SQL语句，还是2007~2008年间)~~    
+&nbsp;&nbsp;&nbsp;&nbsp;工作上遇到一些数据库的问题，现在把使用MySQL的问题都记录下来。~~(遥想上一次写SQL语句，还是2007-2008年间，用着SQL server 2005)~~    
 <!--more-->     
 &nbsp;&nbsp;&nbsp;&nbsp;**1.创建的用户没办法创建数据库**    
 ```SQL
