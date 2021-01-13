@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.gpu-computing.cn","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"valine","storage":true,"lazyload":false,"nav":null,"activeClass":"valine"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;avcodec_open2 用于初始化的音视频编解码器AVCodecContext，声明位于 libavcodec\utils.c 中，函数原型如下：">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ffmpeg函数分析之avcodec_open2">
+<meta property="og:url" content="http://www.gpu-computing.cn/2020/11/18/ffmpeg%E5%87%BD%E6%95%B0%E5%88%86%E6%9E%90%E4%B9%8Bavcodec-open2/index.html">
+<meta property="og:site_name" content="长江的乱想">
+<meta property="og:description" content="&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;avcodec_open2 用于初始化的音视频编解码器AVCodecContext，声明位于 libavcodec\utils.c 中，函数原型如下：">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-11-18T00:19:37.000Z">
+<meta property="article:modified_time" content="2021-01-13T07:35:30.997Z">
+<meta property="article:author" content="lucas wu">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://www.gpu-computing.cn/2020/11/18/ffmpeg%E5%87%BD%E6%95%B0%E5%88%86%E6%9E%90%E4%B9%8Bavcodec-open2/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>ffmpeg函数分析之avcodec_open2 | 长江的乱想</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">长江的乱想</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">14</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://www.gpu-computing.cn/2020/11/18/ffmpeg%E5%87%BD%E6%95%B0%E5%88%86%E6%9E%90%E4%B9%8Bavcodec-open2/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="lucas wu">
+      <meta itemprop="description" content="长江的念念叨叨">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="长江的乱想">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          ffmpeg函数分析之avcodec_open2
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-11-18 00:19:37" itemprop="dateCreated datePublished" datetime="2020-11-18T00:19:37Z">2020-11-18</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-01-13 07:35:30" itemprop="dateModified" datetime="2021-01-13T07:35:30Z">2021-01-13</time>
+              </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2020/11/18/ffmpeg%E5%87%BD%E6%95%B0%E5%88%86%E6%9E%90%E4%B9%8Bavcodec-open2/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2020/11/18/ffmpeg%E5%87%BD%E6%95%B0%E5%88%86%E6%9E%90%E4%B9%8Bavcodec-open2/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>19k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>17 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>&nbsp;&nbsp;&nbsp;&nbsp;avcodec_open2 用于初始化的音视频编解码器AVCodecContext，声明位于 libavcodec\utils.c 中，函数原型如下：</p>
+<a id="more"></a>  
+<pre><code class="C">int  avcodec_open2(AVCodecContext *avctx, const AVCodec *codec, AVDictionary **options)</code></pre>
+<ul>
+<li>avctx：需要初始化的 AVCodecContext    </li>
+<li>codec：输入的AVCodec</li>
+<li>options：包含AVCodecContext和编解码器专用的字典</li>
+</ul>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;我们就具体看下这个函数的实现，代码很长，我就直接把贴出来，代码里加上自己理解的注释    </p>
+<pre><code class="c">int attribute_align_arg avcodec_open2(AVCodecContext *avctx, const AVCodec *codec, AVDictionary **options)
+&#123;
+    int ret = 0;
+    int codec_init_ok = 0;
+    AVDictionary *tmp = NULL;
+    const AVPixFmtDescriptor *pixdesc;
+    AVCodecInternal *avci;
+
+    //判断编解码器是否打开,!!(非零)=1 ，!!(零)=0
+    if (avcodec_is_open(avctx))
+        return 0;
+
+    if (!codec &amp;&amp; !avctx-&gt;codec) &#123;
+        av_log(avctx, AV_LOG_ERROR, &quot;No codec provided to avcodec_open2()\n&quot;);
+        return AVERROR(EINVAL);
+    &#125;
+    if (codec &amp;&amp; avctx-&gt;codec &amp;&amp; codec != avctx-&gt;codec) &#123;
+        av_log(avctx, AV_LOG_ERROR, &quot;This AVCodecContext was allocated for %s, &quot;
+                                    &quot;but %s passed to avcodec_open2()\n&quot;, avctx-&gt;codec-&gt;name, codec-&gt;name);
+        return AVERROR(EINVAL);
+    &#125;
+    if (!codec)
+        codec = avctx-&gt;codec;
+
+    if (avctx-&gt;extradata_size &lt; 0 || avctx-&gt;extradata_size &gt;= FF_MAX_EXTRADATA_SIZE)
+        return AVERROR(EINVAL);
+
+    if (options)
+        av_dict_copy(&amp;tmp, *options, 0);
+
+    ff_lock_avcodec(avctx, codec);
+
+    avci = av_mallocz(sizeof(*avci));
+    if (!avci) &#123;
+        ret = AVERROR(ENOMEM);
+        goto end;
+    &#125;
+    avctx-&gt;internal = avci;
+
+    avci-&gt;to_free = av_frame_alloc();
+    avci-&gt;compat_decode_frame = av_frame_alloc();
+    avci-&gt;compat_encode_packet = av_packet_alloc();
+    avci-&gt;buffer_frame = av_frame_alloc();
+    avci-&gt;buffer_pkt = av_packet_alloc();
+    avci-&gt;es.in_frame = av_frame_alloc();
+    avci-&gt;ds.in_pkt = av_packet_alloc();
+    avci-&gt;last_pkt_props = av_packet_alloc();
+    if (!avci-&gt;compat_decode_frame || !avci-&gt;compat_encode_packet ||
+        !avci-&gt;buffer_frame || !avci-&gt;buffer_pkt          ||
+        !avci-&gt;es.in_frame  || !avci-&gt;ds.in_pkt           ||
+        !avci-&gt;to_free      || !avci-&gt;last_pkt_props) &#123;
+        ret = AVERROR(ENOMEM);
+        goto free_and_end;
+    &#125;
+
+    avci-&gt;skip_samples_multiplier = 1;
+
+    if (codec-&gt;priv_data_size &gt; 0) &#123;
+        if (!avctx-&gt;priv_data) &#123;
+            avctx-&gt;priv_data = av_mallocz(codec-&gt;priv_data_size);
+            if (!avctx-&gt;priv_data) &#123;
+                ret = AVERROR(ENOMEM);
+                goto free_and_end;
+            &#125;
+            if (codec-&gt;priv_class) &#123;
+                *(const AVClass **)avctx-&gt;priv_data = codec-&gt;priv_class;
+                av_opt_set_defaults(avctx-&gt;priv_data);
+            &#125;
+        &#125;
+        if (codec-&gt;priv_class &amp;&amp; (ret = av_opt_set_dict(avctx-&gt;priv_data, &amp;tmp)) &lt; 0)
+            goto free_and_end;
+    &#125; else &#123;
+        avctx-&gt;priv_data = NULL;
+    &#125;
+    //将输入的AVDictionary形式的选项设置到AVCodecContext
+    if ((ret = av_opt_set_dict(avctx, &amp;tmp)) &lt; 0)
+        goto free_and_end;
+
+    if (avctx-&gt;codec_whitelist &amp;&amp; av_match_list(codec-&gt;name, avctx-&gt;codec_whitelist, &#39;,&#39;) &lt;= 0) &#123;
+        av_log(avctx, AV_LOG_ERROR, &quot;Codec (%s) not on whitelist \&#39;%s\&#39;\n&quot;, codec-&gt;name, avctx-&gt;codec_whitelist);
+        ret = AVERROR(EINVAL);
+        goto free_and_end;
+    &#125;
+
+    // only call ff_set_dimensions() for non H.264/VP6F/DXV codecs so as not to overwrite previously setup dimensions
+    if (!(avctx-&gt;coded_width &amp;&amp; avctx-&gt;coded_height &amp;&amp; avctx-&gt;width &amp;&amp; avctx-&gt;height &amp;&amp;
+          (avctx-&gt;codec_id == AV_CODEC_ID_H264 || avctx-&gt;codec_id == AV_CODEC_ID_VP6F || avctx-&gt;codec_id == AV_CODEC_ID_DXV))) &#123;
+        if (avctx-&gt;coded_width &amp;&amp; avctx-&gt;coded_height)
+            ret = ff_set_dimensions(avctx, avctx-&gt;coded_width, avctx-&gt;coded_height);
+        else if (avctx-&gt;width &amp;&amp; avctx-&gt;height)
+            ret = ff_set_dimensions(avctx, avctx-&gt;width, avctx-&gt;height);
+        if (ret &lt; 0)
+            goto free_and_end;
+    &#125;
+
+        //检查宽和高
+    if ((avctx-&gt;coded_width || avctx-&gt;coded_height || avctx-&gt;width || avctx-&gt;height)
+        &amp;&amp; (  av_image_check_size2(avctx-&gt;coded_width, avctx-&gt;coded_height, avctx-&gt;max_pixels, AV_PIX_FMT_NONE, 0, avctx) &lt; 0
+           || av_image_check_size2(avctx-&gt;width,       avctx-&gt;height,       avctx-&gt;max_pixels, AV_PIX_FMT_NONE, 0, avctx) &lt; 0)) &#123;
+        av_log(avctx, AV_LOG_WARNING, &quot;Ignoring invalid width/height values\n&quot;);
+        ff_set_dimensions(avctx, 0, 0);
+    &#125;
+
+
+    //检查宽高比
+    if (avctx-&gt;width &gt; 0 &amp;&amp; avctx-&gt;height &gt; 0) &#123;
+        if (av_image_check_sar(avctx-&gt;width, avctx-&gt;height,
+                               avctx-&gt;sample_aspect_ratio) &lt; 0) &#123;
+            av_log(avctx, AV_LOG_WARNING, &quot;ignoring invalid SAR: %u/%u\n&quot;,
+                   avctx-&gt;sample_aspect_ratio.num,
+                   avctx-&gt;sample_aspect_ratio.den);
+            avctx-&gt;sample_aspect_ratio = (AVRational)&#123; 0, 1 &#125;;
+        &#125;
+    &#125;
+
+    /* if the decoder init function was already called previously,
+     * free the already allocated subtitle_header before overwriting it */
+    if (av_codec_is_decoder(codec))
+        av_freep(&amp;avctx-&gt;subtitle_header);
+
+    if (avctx-&gt;channels &gt; FF_SANE_NB_CHANNELS || avctx-&gt;channels &lt; 0) &#123;
+        av_log(avctx, AV_LOG_ERROR, &quot;Too many or invalid channels: %d\n&quot;, avctx-&gt;channels);
+        ret = AVERROR(EINVAL);
+        goto free_and_end;
+    &#125;
+    if (avctx-&gt;sample_rate &lt; 0) &#123;
+        av_log(avctx, AV_LOG_ERROR, &quot;Invalid sample rate: %d\n&quot;, avctx-&gt;sample_rate);
+        ret = AVERROR(EINVAL);
+        goto free_and_end;
+    &#125;
+    if (avctx-&gt;block_align &lt; 0) &#123;
+        av_log(avctx, AV_LOG_ERROR, &quot;Invalid block align: %d\n&quot;, avctx-&gt;block_align);
+        ret = AVERROR(EINVAL);
+        goto free_and_end;
+    &#125;
+
+    avctx-&gt;codec = codec;
+    if ((avctx-&gt;codec_type == AVMEDIA_TYPE_UNKNOWN || avctx-&gt;codec_type == codec-&gt;type) &amp;&amp;
+        avctx-&gt;codec_id == AV_CODEC_ID_NONE) &#123;
+        avctx-&gt;codec_type = codec-&gt;type;
+        avctx-&gt;codec_id   = codec-&gt;id;
+    &#125;
+    if (avctx-&gt;codec_id != codec-&gt;id || (avctx-&gt;codec_type != codec-&gt;type
+                                         &amp;&amp; avctx-&gt;codec_type != AVMEDIA_TYPE_ATTACHMENT)) &#123;
+        av_log(avctx, AV_LOG_ERROR, &quot;Codec type or id mismatches\n&quot;);
+        ret = AVERROR(EINVAL);
+        goto free_and_end;
+    &#125;
+    avctx-&gt;frame_number = 0;
+    avctx-&gt;codec_descriptor = avcodec_descriptor_get(avctx-&gt;codec_id);
+
+    if ((avctx-&gt;codec-&gt;capabilities &amp; AV_CODEC_CAP_EXPERIMENTAL) &amp;&amp;
+        avctx-&gt;strict_std_compliance &gt; FF_COMPLIANCE_EXPERIMENTAL) &#123;
+        const char *codec_string = av_codec_is_encoder(codec) ? &quot;encoder&quot; : &quot;decoder&quot;;
+        const AVCodec *codec2;
+        av_log(avctx, AV_LOG_ERROR,
+               &quot;The %s &#39;%s&#39; is experimental but experimental codecs are not enabled, &quot;
+               &quot;add &#39;-strict %d&#39; if you want to use it.\n&quot;,
+               codec_string, codec-&gt;name, FF_COMPLIANCE_EXPERIMENTAL);
+        codec2 = av_codec_is_encoder(codec) ? avcodec_find_encoder(codec-&gt;id) : avcodec_find_decoder(codec-&gt;id);
+        if (!(codec2-&gt;capabilities &amp; AV_CODEC_CAP_EXPERIMENTAL))
+            av_log(avctx, AV_LOG_ERROR, &quot;Alternatively use the non experimental %s &#39;%s&#39;.\n&quot;,
+                codec_string, codec2-&gt;name);
+        ret = AVERROR_EXPERIMENTAL;
+        goto free_and_end;
+    &#125;
+
+    if (avctx-&gt;codec_type == AVMEDIA_TYPE_AUDIO &amp;&amp;
+        (!avctx-&gt;time_base.num || !avctx-&gt;time_base.den)) &#123;
+        avctx-&gt;time_base.num = 1;
+        avctx-&gt;time_base.den = avctx-&gt;sample_rate;
+    &#125;
+
+    if (!HAVE_THREADS)
+        av_log(avctx, AV_LOG_WARNING, &quot;Warning: not compiled with thread support, using thread emulation\n&quot;);
+
+    if (CONFIG_FRAME_THREAD_ENCODER &amp;&amp; av_codec_is_encoder(avctx-&gt;codec)) &#123;
+        ff_unlock_avcodec(codec); //we will instantiate a few encoders thus kick the counter to prevent false detection of a problem
+        ret = ff_frame_thread_encoder_init(avctx, options ? *options : NULL);
+        ff_lock_avcodec(avctx, codec);
+        if (ret &lt; 0)
+            goto free_and_end;
+    &#125;
+
+    if (av_codec_is_decoder(avctx-&gt;codec)) &#123;
+        ret = ff_decode_bsfs_init(avctx);
+        if (ret &lt; 0)
+            goto free_and_end;
+    &#125;
+
+    if (HAVE_THREADS
+        &amp;&amp; !(avci-&gt;frame_thread_encoder &amp;&amp; (avctx-&gt;active_thread_type&amp;FF_THREAD_FRAME))) &#123;
+        ret = ff_thread_init(avctx);
+        if (ret &lt; 0) &#123;
+            goto free_and_end;
+        &#125;
+    &#125;
+    if (!HAVE_THREADS &amp;&amp; !(codec-&gt;capabilities &amp; AV_CODEC_CAP_AUTO_THREADS))
+        avctx-&gt;thread_count = 1;
+
+    if (avctx-&gt;codec-&gt;max_lowres &lt; avctx-&gt;lowres || avctx-&gt;lowres &lt; 0) &#123;
+        av_log(avctx, AV_LOG_WARNING, &quot;The maximum value for lowres supported by the decoder is %d\n&quot;,
+               avctx-&gt;codec-&gt;max_lowres);
+        avctx-&gt;lowres = avctx-&gt;codec-&gt;max_lowres;
+    &#125;
+
+    //如果是编码器检查输入参数
+    if (av_codec_is_encoder(avctx-&gt;codec)) &#123;
+        int i;
+#if FF_API_CODED_FRAME
+FF_DISABLE_DEPRECATION_WARNINGS
+        avctx-&gt;coded_frame = av_frame_alloc();
+        if (!avctx-&gt;coded_frame) &#123;
+            ret = AVERROR(ENOMEM);
+            goto free_and_end;
+        &#125;
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+        //对于视频，检查帧的时间戳信息
+        if (avctx-&gt;time_base.num &lt;= 0 || avctx-&gt;time_base.den &lt;= 0) &#123;
+            av_log(avctx, AV_LOG_ERROR, &quot;The encoder timebase is not set.\n&quot;);
+            ret = AVERROR(EINVAL);
+            goto free_and_end;
+        &#125;
+
+        //对于音频，采样率是否符合要求
+        if (avctx-&gt;codec-&gt;sample_fmts) &#123;
+            //遍历编码器支持的所有采样率
+            for (i = 0; avctx-&gt;codec-&gt;sample_fmts[i] != AV_SAMPLE_FMT_NONE; i++) &#123;
+                if (avctx-&gt;sample_fmt == avctx-&gt;codec-&gt;sample_fmts[i])
+                    break;
+                if (avctx-&gt;channels == 1 &amp;&amp;
+                    av_get_planar_sample_fmt(avctx-&gt;sample_fmt) ==
+                    av_get_planar_sample_fmt(avctx-&gt;codec-&gt;sample_fmts[i])) &#123;
+                    avctx-&gt;sample_fmt = avctx-&gt;codec-&gt;sample_fmts[i];
+                    break;
+                &#125;
+            &#125;
+            if (avctx-&gt;codec-&gt;sample_fmts[i] == AV_SAMPLE_FMT_NONE) &#123;
+                char buf[128];
+                snprintf(buf, sizeof(buf), &quot;%d&quot;, avctx-&gt;sample_fmt);
+                av_log(avctx, AV_LOG_ERROR, &quot;Specified sample format %s is invalid or not supported\n&quot;,
+                       (char *)av_x_if_null(av_get_sample_fmt_name(avctx-&gt;sample_fmt), buf));
+                ret = AVERROR(EINVAL);
+                goto free_and_end;
+            &#125;
+        &#125;
+        //检查像素格式
+        if (avctx-&gt;codec-&gt;pix_fmts) &#123;
+            for (i = 0; avctx-&gt;codec-&gt;pix_fmts[i] != AV_PIX_FMT_NONE; i++)
+                if (avctx-&gt;pix_fmt == avctx-&gt;codec-&gt;pix_fmts[i])
+                    break;
+            if (avctx-&gt;codec-&gt;pix_fmts[i] == AV_PIX_FMT_NONE
+                &amp;&amp; !((avctx-&gt;codec_id == AV_CODEC_ID_MJPEG || avctx-&gt;codec_id == AV_CODEC_ID_LJPEG)
+                     &amp;&amp; avctx-&gt;strict_std_compliance &lt;= FF_COMPLIANCE_UNOFFICIAL)) &#123;
+                char buf[128];
+                snprintf(buf, sizeof(buf), &quot;%d&quot;, avctx-&gt;pix_fmt);
+                av_log(avctx, AV_LOG_ERROR, &quot;Specified pixel format %s is invalid or not supported\n&quot;,
+                       (char *)av_x_if_null(av_get_pix_fmt_name(avctx-&gt;pix_fmt), buf));
+                ret = AVERROR(EINVAL);
+                goto free_and_end;
+            &#125;
+            if (avctx-&gt;codec-&gt;pix_fmts[i] == AV_PIX_FMT_YUVJ420P ||
+                avctx-&gt;codec-&gt;pix_fmts[i] == AV_PIX_FMT_YUVJ411P ||
+                avctx-&gt;codec-&gt;pix_fmts[i] == AV_PIX_FMT_YUVJ422P ||
+                avctx-&gt;codec-&gt;pix_fmts[i] == AV_PIX_FMT_YUVJ440P ||
+                avctx-&gt;codec-&gt;pix_fmts[i] == AV_PIX_FMT_YUVJ444P)
+                avctx-&gt;color_range = AVCOL_RANGE_JPEG;
+        &#125;
+        //检查采样率
+        if (avctx-&gt;codec-&gt;supported_samplerates) &#123;
+            for (i = 0; avctx-&gt;codec-&gt;supported_samplerates[i] != 0; i++)
+                if (avctx-&gt;sample_rate == avctx-&gt;codec-&gt;supported_samplerates[i])
+                    break;
+            if (avctx-&gt;codec-&gt;supported_samplerates[i] == 0) &#123;
+                av_log(avctx, AV_LOG_ERROR, &quot;Specified sample rate %d is not supported\n&quot;,
+                       avctx-&gt;sample_rate);
+                ret = AVERROR(EINVAL);
+                goto free_and_end;
+            &#125;
+        &#125;
+        if (avctx-&gt;sample_rate &lt; 0) &#123;
+            av_log(avctx, AV_LOG_ERROR, &quot;Specified sample rate %d is not supported\n&quot;,
+                    avctx-&gt;sample_rate);
+            ret = AVERROR(EINVAL);
+            goto free_and_end;
+        &#125;
+        //检查声道布局
+        if (avctx-&gt;codec-&gt;channel_layouts) &#123;
+            if (!avctx-&gt;channel_layout) &#123;
+                av_log(avctx, AV_LOG_WARNING, &quot;Channel layout not specified\n&quot;);
+            &#125; else &#123;
+                for (i = 0; avctx-&gt;codec-&gt;channel_layouts[i] != 0; i++)
+                    if (avctx-&gt;channel_layout == avctx-&gt;codec-&gt;channel_layouts[i])
+                        break;
+                if (avctx-&gt;codec-&gt;channel_layouts[i] == 0) &#123;
+                    char buf[512];
+                    av_get_channel_layout_string(buf, sizeof(buf), -1, avctx-&gt;channel_layout);
+                    av_log(avctx, AV_LOG_ERROR, &quot;Specified channel layout &#39;%s&#39; is not supported\n&quot;, buf);
+                    ret = AVERROR(EINVAL);
+                    goto free_and_end;
+                &#125;
+            &#125;
+        &#125;
+        //检查声道数
+        if (avctx-&gt;channel_layout &amp;&amp; avctx-&gt;channels) &#123;
+            int channels = av_get_channel_layout_nb_channels(avctx-&gt;channel_layout);
+            if (channels != avctx-&gt;channels) &#123;
+                char buf[512];
+                av_get_channel_layout_string(buf, sizeof(buf), -1, avctx-&gt;channel_layout);
+                av_log(avctx, AV_LOG_ERROR,
+                       &quot;Channel layout &#39;%s&#39; with %d channels does not match number of specified channels %d\n&quot;,
+                       buf, channels, avctx-&gt;channels);
+                ret = AVERROR(EINVAL);
+                goto free_and_end;
+            &#125;
+        &#125; else if (avctx-&gt;channel_layout) &#123;
+            avctx-&gt;channels = av_get_channel_layout_nb_channels(avctx-&gt;channel_layout);
+        &#125;
+        if (avctx-&gt;channels &lt; 0) &#123;
+            av_log(avctx, AV_LOG_ERROR, &quot;Specified number of channels %d is not supported\n&quot;,
+                    avctx-&gt;channels);
+            ret = AVERROR(EINVAL);
+            goto free_and_end;
+        &#125;
+
+        if(avctx-&gt;codec_type == AVMEDIA_TYPE_VIDEO) &#123;
+            pixdesc = av_pix_fmt_desc_get(avctx-&gt;pix_fmt);
+            //检查视频数据比特数
+            if (    avctx-&gt;bits_per_raw_sample &lt; 0
+                || (avctx-&gt;bits_per_raw_sample &gt; 8 &amp;&amp; pixdesc-&gt;comp[0].depth &lt;= 8)) &#123;
+                av_log(avctx, AV_LOG_WARNING, &quot;Specified bit depth %d not possible with the specified pixel formats depth %d\n&quot;,
+                    avctx-&gt;bits_per_raw_sample, pixdesc-&gt;comp[0].depth);
+                avctx-&gt;bits_per_raw_sample = pixdesc-&gt;comp[0].depth;
+            &#125;
+            //检查宽高
+            if (avctx-&gt;width &lt;= 0 || avctx-&gt;height &lt;= 0) &#123;
+                av_log(avctx, AV_LOG_ERROR, &quot;dimensions not set\n&quot;);
+                ret = AVERROR(EINVAL);
+                goto free_and_end;
+            &#125;
+        &#125;
+        //检查码率
+        if (   (avctx-&gt;codec_type == AVMEDIA_TYPE_VIDEO || avctx-&gt;codec_type == AVMEDIA_TYPE_AUDIO)
+            &amp;&amp; avctx-&gt;bit_rate&gt;0 &amp;&amp; avctx-&gt;bit_rate&lt;1000) &#123;
+            av_log(avctx, AV_LOG_WARNING, &quot;Bitrate %&quot;PRId64&quot; is extremely low, maybe you mean %&quot;PRId64&quot;k\n&quot;, avctx-&gt;bit_rate, avctx-&gt;bit_rate);
+        &#125;
+
+        if (!avctx-&gt;rc_initial_buffer_occupancy)
+            avctx-&gt;rc_initial_buffer_occupancy = avctx-&gt;rc_buffer_size * 3LL / 4;
+
+        if (avctx-&gt;ticks_per_frame &amp;&amp; avctx-&gt;time_base.num &amp;&amp;
+            avctx-&gt;ticks_per_frame &gt; INT_MAX / avctx-&gt;time_base.num) &#123;
+            av_log(avctx, AV_LOG_ERROR,
+                   &quot;ticks_per_frame %d too large for the timebase %d/%d.&quot;,
+                   avctx-&gt;ticks_per_frame,
+                   avctx-&gt;time_base.num,
+                   avctx-&gt;time_base.den);
+            goto free_and_end;
+        &#125;
+
+        if (avctx-&gt;hw_frames_ctx) &#123;
+            AVHWFramesContext *frames_ctx = (AVHWFramesContext*)avctx-&gt;hw_frames_ctx-&gt;data;
+            if (frames_ctx-&gt;format != avctx-&gt;pix_fmt) &#123;
+                av_log(avctx, AV_LOG_ERROR,
+                       &quot;Mismatching AVCodecContext.pix_fmt and AVHWFramesContext.format\n&quot;);
+                ret = AVERROR(EINVAL);
+                goto free_and_end;
+            &#125;
+            if (avctx-&gt;sw_pix_fmt != AV_PIX_FMT_NONE &amp;&amp;
+                avctx-&gt;sw_pix_fmt != frames_ctx-&gt;sw_format) &#123;
+                av_log(avctx, AV_LOG_ERROR,
+                       &quot;Mismatching AVCodecContext.sw_pix_fmt (%s) &quot;
+                       &quot;and AVHWFramesContext.sw_format (%s)\n&quot;,
+                       av_get_pix_fmt_name(avctx-&gt;sw_pix_fmt),
+                       av_get_pix_fmt_name(frames_ctx-&gt;sw_format));
+                ret = AVERROR(EINVAL);
+                goto free_and_end;
+            &#125;
+            avctx-&gt;sw_pix_fmt = frames_ctx-&gt;sw_format;
+        &#125;
+    &#125;
+
+    avctx-&gt;pts_correction_num_faulty_pts =
+    avctx-&gt;pts_correction_num_faulty_dts = 0;
+    avctx-&gt;pts_correction_last_pts =
+    avctx-&gt;pts_correction_last_dts = INT64_MIN;
+
+    if (   !CONFIG_GRAY &amp;&amp; avctx-&gt;flags &amp; AV_CODEC_FLAG_GRAY
+        &amp;&amp; avctx-&gt;codec_descriptor-&gt;type == AVMEDIA_TYPE_VIDEO)
+        av_log(avctx, AV_LOG_WARNING,
+               &quot;gray decoding requested but not enabled at configuration time\n&quot;);
+    if (avctx-&gt;flags2 &amp; AV_CODEC_FLAG2_EXPORT_MVS) &#123;
+        avctx-&gt;export_side_data |= AV_CODEC_EXPORT_DATA_MVS;
+    &#125;
+
+    //所有检查无误后，调用编解码器初始化函数，根据AVCodecContext中的设置来初始化编码器
+    if (   avctx-&gt;codec-&gt;init &amp;&amp; (!(avctx-&gt;active_thread_type&amp;FF_THREAD_FRAME)
+        || avci-&gt;frame_thread_encoder)) &#123;
+        ret = avctx-&gt;codec-&gt;init(avctx);
+        if (ret &lt; 0) &#123;
+            codec_init_ok = -1;
+            goto free_and_end;
+        &#125;
+        codec_init_ok = 1;
+    &#125;
+
+    ret=0;
+    //解码器的参数大部分都是由系统自动设定而不是由用户设定，因而不怎么需要检查
+    if (av_codec_is_decoder(avctx-&gt;codec)) &#123;
+        if (!avctx-&gt;bit_rate)
+            avctx-&gt;bit_rate = get_bit_rate(avctx);
+        /* validate channel layout from the decoder */
+        if (avctx-&gt;channel_layout) &#123;
+            int channels = av_get_channel_layout_nb_channels(avctx-&gt;channel_layout);
+            if (!avctx-&gt;channels)
+                avctx-&gt;channels = channels;
+            else if (channels != avctx-&gt;channels) &#123;
+                char buf[512];
+                av_get_channel_layout_string(buf, sizeof(buf), -1, avctx-&gt;channel_layout);
+                av_log(avctx, AV_LOG_WARNING,
+                       &quot;Channel layout &#39;%s&#39; with %d channels does not match specified number of channels %d: &quot;
+                       &quot;ignoring specified channel layout\n&quot;,
+                       buf, channels, avctx-&gt;channels);
+                avctx-&gt;channel_layout = 0;
+            &#125;
+        &#125;
+        if (avctx-&gt;channels &amp;&amp; avctx-&gt;channels &lt; 0 ||
+            avctx-&gt;channels &gt; FF_SANE_NB_CHANNELS) &#123;
+            ret = AVERROR(EINVAL);
+            goto free_and_end;
+        &#125;
+        if (avctx-&gt;bits_per_coded_sample &lt; 0) &#123;
+            ret = AVERROR(EINVAL);
+            goto free_and_end;
+        &#125;
+        if (avctx-&gt;sub_charenc) &#123;
+            if (avctx-&gt;codec_type != AVMEDIA_TYPE_SUBTITLE) &#123;
+                av_log(avctx, AV_LOG_ERROR, &quot;Character encoding is only &quot;
+                       &quot;supported with subtitles codecs\n&quot;);
+                ret = AVERROR(EINVAL);
+                goto free_and_end;
+            &#125; else if (avctx-&gt;codec_descriptor-&gt;props &amp; AV_CODEC_PROP_BITMAP_SUB) &#123;
+                av_log(avctx, AV_LOG_WARNING, &quot;Codec &#39;%s&#39; is bitmap-based, &quot;
+                       &quot;subtitles character encoding will be ignored\n&quot;,
+                       avctx-&gt;codec_descriptor-&gt;name);
+                avctx-&gt;sub_charenc_mode = FF_SUB_CHARENC_MODE_DO_NOTHING;
+            &#125; else &#123;
+                /* input character encoding is set for a text based subtitle
+                 * codec at this point */
+                if (avctx-&gt;sub_charenc_mode == FF_SUB_CHARENC_MODE_AUTOMATIC)
+                    avctx-&gt;sub_charenc_mode = FF_SUB_CHARENC_MODE_PRE_DECODER;
+
+                if (avctx-&gt;sub_charenc_mode == FF_SUB_CHARENC_MODE_PRE_DECODER) &#123;
+#if CONFIG_ICONV
+                    iconv_t cd = iconv_open(&quot;UTF-8&quot;, avctx-&gt;sub_charenc);
+                    if (cd == (iconv_t)-1) &#123;
+                        ret = AVERROR(errno);
+                        av_log(avctx, AV_LOG_ERROR, &quot;Unable to open iconv context &quot;
+                               &quot;with input character encoding \&quot;%s\&quot;\n&quot;, avctx-&gt;sub_charenc);
+                        goto free_and_end;
+                    &#125;
+                    iconv_close(cd);
+#else
+                    av_log(avctx, AV_LOG_ERROR, &quot;Character encoding subtitles &quot;
+                           &quot;conversion needs a libavcodec built with iconv support &quot;
+                           &quot;for this codec\n&quot;);
+                    ret = AVERROR(ENOSYS);
+                    goto free_and_end;
+#endif
+                &#125;
+            &#125;
+        &#125;
+
+#if FF_API_AVCTX_TIMEBASE
+        if (avctx-&gt;framerate.num &gt; 0 &amp;&amp; avctx-&gt;framerate.den &gt; 0)
+            avctx-&gt;time_base = av_inv_q(av_mul_q(avctx-&gt;framerate, (AVRational)&#123;avctx-&gt;ticks_per_frame, 1&#125;));
+#endif
+    &#125;
+    if (codec-&gt;priv_data_size &gt; 0 &amp;&amp; avctx-&gt;priv_data &amp;&amp; codec-&gt;priv_class) &#123;
+        av_assert0(*(const AVClass **)avctx-&gt;priv_data == codec-&gt;priv_class);
+    &#125;
+
+end:
+    ff_unlock_avcodec(codec);
+    if (options) &#123;
+        av_dict_free(options);
+        *options = tmp;
+    &#125;
+
+    return ret;
+free_and_end:
+    if (avctx-&gt;codec &amp;&amp; avctx-&gt;codec-&gt;close &amp;&amp;
+        (codec_init_ok &gt; 0 || (codec_init_ok &lt; 0 &amp;&amp;
+         avctx-&gt;codec-&gt;caps_internal &amp; FF_CODEC_CAP_INIT_CLEANUP)))
+        avctx-&gt;codec-&gt;close(avctx);
+
+    if (HAVE_THREADS &amp;&amp; avci-&gt;thread_ctx)
+        ff_thread_free(avctx);
+
+    if (codec-&gt;priv_class &amp;&amp; avctx-&gt;priv_data)
+        av_opt_free(avctx-&gt;priv_data);
+    av_opt_free(avctx);
+
+    if (av_codec_is_encoder(avctx-&gt;codec)) &#123;
+#if FF_API_CODED_FRAME
+FF_DISABLE_DEPRECATION_WARNINGS
+        av_frame_free(&amp;avctx-&gt;coded_frame);
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+        av_freep(&amp;avctx-&gt;extradata);
+        avctx-&gt;extradata_size = 0;
+    &#125;
+
+    av_dict_free(&amp;tmp);
+    av_freep(&amp;avctx-&gt;priv_data);
+    av_freep(&amp;avctx-&gt;subtitle_header);
+
+    av_frame_free(&amp;avci-&gt;to_free);
+    av_frame_free(&amp;avci-&gt;compat_decode_frame);
+    av_frame_free(&amp;avci-&gt;buffer_frame);
+    av_packet_free(&amp;avci-&gt;compat_encode_packet);
+    av_packet_free(&amp;avci-&gt;buffer_pkt);
+    av_packet_free(&amp;avci-&gt;last_pkt_props);
+
+    av_packet_free(&amp;avci-&gt;ds.in_pkt);
+    av_frame_free(&amp;avci-&gt;es.in_frame);
+    av_bsf_free(&amp;avci-&gt;bsf);
+
+    av_buffer_unref(&amp;avci-&gt;pool);
+    av_freep(&amp;avci);
+    avctx-&gt;internal = NULL;
+    avctx-&gt;codec = NULL;
+    goto end;
+&#125;
+</code></pre>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;总结起来就是做了：    </p>
+<ol>
+<li>为各种结构体分配内存</li>
+<li>将输入的AVDictionary形式的选项设置到AVCodecContext</li>
+<li>针对是否是音频，是否为编&amp;解码器，做一些参数的检查</li>
+<li>调用AVCodec中的init来初始化具体的编解码器</li>
+</ol>
+<p><strong>参考</strong><br>[1] <a target="_blank" rel="noopener" href="https://blog.csdn.net/leixiaohua1020/article/details/44117891">FFmpeg源代码简单分析：avcodec_open2()</a></p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>lucas wu
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="http://www.gpu-computing.cn/2020/11/18/ffmpeg%E5%87%BD%E6%95%B0%E5%88%86%E6%9E%90%E4%B9%8Bavcodec-open2/" title="ffmpeg函数分析之avcodec_open2">http://www.gpu-computing.cn/2020/11/18/ffmpeg函数分析之avcodec-open2/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/11/13/ffmpeg%E7%BB%93%E6%9E%84%E4%BD%93%E5%88%86%E6%9E%90%E4%B9%8BAVCodecContext/" rel="prev" title="ffmpeg结构体分析之AVCodecContext">
+      <i class="fa fa-chevron-left"></i> ffmpeg结构体分析之AVCodecContext
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/11/24/ffmpeg%E7%BB%93%E6%9E%84%E4%BD%93%E5%88%86%E6%9E%90%E4%B9%8BAVFrame/" rel="next" title="ffmpeg结构体分析之AVFrame">
+      ffmpeg结构体分析之AVFrame <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">lucas wu</p>
+  <div class="site-description" itemprop="description">长江的念念叨叨</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">14</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/lucaswu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;lucaswu" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:wcj0626@gmail.com" title="E-Mail → mailto:wcj0626@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="BbeiAn-info">
+    
+      <a target="_blank"  href="http://www.beian.miit.gov.cn/">浙ICP备17047146号</a>
+      </a>
+    </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('https://cdn.jsdelivr.net/npm/valine@1.4.14/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : false,
+      notify     : false,
+      appId      : 'ADi8KNpWgosz9eK2akEE59Rl-gzGzoHsz',
+      appKey     : 'OoPPJfW5ciHIjoVujpFjlIpx',
+      placeholder: "Just go go",
+      avatar     : 'mm',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : false,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

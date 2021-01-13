@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.gpu-computing.cn","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"valine","storage":true,"lazyload":false,"nav":null,"activeClass":"valine"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;在ffmpeg中，很多数据的存储都是以AVBufferRef&#x2F;AVBuffer为基础的。现在就来说说这两个结构体的关系。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ffmpeg结构体分析之AVBuffer">
+<meta property="og:url" content="http://www.gpu-computing.cn/2020/11/25/ffmpeg%E7%BB%93%E6%9E%84%E4%BD%93%E5%88%86%E6%9E%90%E4%B9%8BAVBuffer/index.html">
+<meta property="og:site_name" content="长江的乱想">
+<meta property="og:description" content="&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;在ffmpeg中，很多数据的存储都是以AVBufferRef&#x2F;AVBuffer为基础的。现在就来说说这两个结构体的关系。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-11-25T00:24:16.000Z">
+<meta property="article:modified_time" content="2020-12-01T02:29:22.797Z">
+<meta property="article:author" content="lucas wu">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://www.gpu-computing.cn/2020/11/25/ffmpeg%E7%BB%93%E6%9E%84%E4%BD%93%E5%88%86%E6%9E%90%E4%B9%8BAVBuffer/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>ffmpeg结构体分析之AVBuffer | 长江的乱想</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">长江的乱想</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">14</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://www.gpu-computing.cn/2020/11/25/ffmpeg%E7%BB%93%E6%9E%84%E4%BD%93%E5%88%86%E6%9E%90%E4%B9%8BAVBuffer/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="lucas wu">
+      <meta itemprop="description" content="长江的念念叨叨">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="长江的乱想">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          ffmpeg结构体分析之AVBuffer
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-11-25 00:24:16" itemprop="dateCreated datePublished" datetime="2020-11-25T00:24:16Z">2020-11-25</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-01 02:29:22" itemprop="dateModified" datetime="2020-12-01T02:29:22Z">2020-12-01</time>
+              </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2020/11/25/ffmpeg%E7%BB%93%E6%9E%84%E4%BD%93%E5%88%86%E6%9E%90%E4%B9%8BAVBuffer/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2020/11/25/ffmpeg%E7%BB%93%E6%9E%84%E4%BD%93%E5%88%86%E6%9E%90%E4%B9%8BAVBuffer/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>3.2k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>3 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>&nbsp;&nbsp;&nbsp;&nbsp;在ffmpeg中，很多数据的存储都是以AVBufferRef/AVBuffer为基础的。现在就来说说这两个结构体的关系。</p>
+<a id="more"></a>     
+<p>&nbsp;&nbsp;&nbsp;&nbsp;AVBuffer定义在&lt;libavutil\buffer_internal.h&gt;中，对调用者是隐藏的。AVBufferRef定义在&lt;libavutil\buffer.h&gt;中，对调用者是公开的。    </p>
+<ul>
+<li>AVBuffer代表数据缓存本身，但一般情况下调用者不能直接调用它，需要通过AVBufferRef的调用，让API内部对AVBuffer进行操作。</li>
+<li>AVBufferRef是AVBuffer提供了一层封装，最主要的是作引用计数处理。    <h2 id="AVBuffer结构体"><a href="#AVBuffer结构体" class="headerlink" title="AVBuffer结构体"></a><strong>AVBuffer结构体</strong></h2>&nbsp;&nbsp;&nbsp;&nbsp;AVBuffer结构体的结构体定义如下：<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">AVBuffer</span> &#123;</span></span><br><span class="line">    <span class="keyword">uint8_t</span> *data; <span class="comment">/**&lt; data described by this buffer */</span></span><br><span class="line">    <span class="keyword">int</span>      size; <span class="comment">/**&lt; size of data in bytes */</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     *  number of existing AVBufferRef instances referring to this buffer</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">atomic_uint</span> refcount;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * a callback for freeing the data</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">void</span> (*<span class="built_in">free</span>)(<span class="keyword">void</span> *opaque, <span class="keyword">uint8_t</span> *data);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * an opaque pointer, to be used by the freeing callback</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">void</span> *opaque;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * A combination of AV_BUFFER_FLAG_*</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">int</span> flags;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * A combination of BUFFER_FLAG_*</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">int</span> flags_internal;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure></li>
+<li>data: 缓冲区地址</li>
+<li>size: 缓冲区大小</li>
+<li>refcount: 应用计数值</li>
+<li>free: 用于释放缓冲区内存的回调函数</li>
+<li>opaque: 提供给free回调函数的参数</li>
+<li>flags/flags_internal: 缓冲区标志    <h2 id="AVBufferRef结构体"><a href="#AVBufferRef结构体" class="headerlink" title="AVBufferRef结构体"></a><strong>AVBufferRef结构体</strong></h2>&nbsp;&nbsp;&nbsp;&nbsp;AVBufferRef结构体的结构体定义如下：<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">AVBufferRef</span> &#123;</span></span><br><span class="line">    AVBuffer *buffer;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * The data buffer. It is considered writable if and only if</span></span><br><span class="line"><span class="comment">     * this is the only reference to the buffer, in which case</span></span><br><span class="line"><span class="comment">     * av_buffer_is_writable() returns 1.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">uint8_t</span> *data;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Size of data in bytes.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">int</span>      size;</span><br><span class="line">&#125; AVBufferRef;</span><br></pre></td></tr></table></figure></li>
+<li>buffer:  真正的数据对象</li>
+<li>data: 缓冲区地址，实际等于buffer-&gt;data</li>
+<li>size: 缓冲区大小，实际等于buffer-&gt;size<h2 id="相关函数分析"><a href="#相关函数分析" class="headerlink" title="相关函数分析"></a><strong>相关函数分析</strong></h2><h3 id="av-buffer-alloc"><a href="#av-buffer-alloc" class="headerlink" title="av_buffer_alloc()"></a><strong>av_buffer_alloc()</strong></h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">AVBufferRef *<span class="title">av_buffer_alloc</span><span class="params">(<span class="keyword">int</span> size)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    AVBufferRef *ret = <span class="literal">NULL</span>;</span><br><span class="line">    <span class="keyword">uint8_t</span>    *data = <span class="literal">NULL</span>;</span><br><span class="line"></span><br><span class="line">    data = av_malloc(size);</span><br><span class="line">    <span class="keyword">if</span> (!data)</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line"></span><br><span class="line">    ret = av_buffer_create(data, size, av_buffer_default_free, <span class="literal">NULL</span>, <span class="number">0</span>);</span><br><span class="line">    <span class="keyword">if</span> (!ret)</span><br><span class="line">        av_freep(&amp;data);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> ret;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="av-buffer-create"><a href="#av-buffer-create" class="headerlink" title="av_buffer_create()"></a><strong>av_buffer_create()</strong></h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">AVBufferRef *<span class="title">av_buffer_create</span><span class="params">(<span class="keyword">uint8_t</span> *data, <span class="keyword">int</span> size,</span></span></span><br><span class="line"><span class="function"><span class="params">                              <span class="keyword">void</span> (*<span class="built_in">free</span>)(<span class="keyword">void</span> *opaque, <span class="keyword">uint8_t</span> *data),</span></span></span><br><span class="line"><span class="function"><span class="params">                              <span class="keyword">void</span> *opaque, <span class="keyword">int</span> flags)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    AVBufferRef *ref = <span class="literal">NULL</span>;</span><br><span class="line">    AVBuffer    *buf = <span class="literal">NULL</span>;</span><br><span class="line"></span><br><span class="line">    buf = av_mallocz(<span class="keyword">sizeof</span>(*buf));</span><br><span class="line">    <span class="keyword">if</span> (!buf)</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line"></span><br><span class="line">    buf-&gt;data     = data;</span><br><span class="line">    buf-&gt;size     = size;</span><br><span class="line">    buf-&gt;<span class="built_in">free</span>     = <span class="built_in">free</span> ? <span class="built_in">free</span> : av_buffer_default_free;</span><br><span class="line">    buf-&gt;opaque   = opaque;</span><br><span class="line"></span><br><span class="line">    atomic_init(&amp;buf-&gt;refcount, <span class="number">1</span>);</span><br><span class="line"></span><br><span class="line">    buf-&gt;flags = flags;</span><br><span class="line"></span><br><span class="line">    ref = av_mallocz(<span class="keyword">sizeof</span>(*ref));</span><br><span class="line">    <span class="keyword">if</span> (!ref) &#123;</span><br><span class="line">        av_freep(&amp;buf);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    ref-&gt;buffer = buf;</span><br><span class="line">    ref-&gt;data   = data;</span><br><span class="line">    ref-&gt;size   = size;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> ref;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="av-buffer-ref"><a href="#av-buffer-ref" class="headerlink" title="av_buffer_ref()"></a><strong>av_buffer_ref()</strong></h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">AVBufferRef *<span class="title">av_buffer_ref</span><span class="params">(AVBufferRef *buf)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    AVBufferRef *ret = av_mallocz(<span class="keyword">sizeof</span>(*ret));</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (!ret)</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line"></span><br><span class="line">    *ret = *buf;</span><br><span class="line"></span><br><span class="line">    atomic_fetch_add_explicit(&amp;buf-&gt;buffer-&gt;refcount, <span class="number">1</span>, memory_order_relaxed);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> ret;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+&nbsp;&nbsp;&nbsp;&nbsp;这个函数的作用是新创建一个指向同一AVBuffer的引用参考。把传入的buf参数赋值给ref，也就是buf和ref将共有一份AVBuffer缓冲区，但缓冲区引用计数加1.</li>
+</ul>
+<h3 id="av-buffer-ref-1"><a href="#av-buffer-ref-1" class="headerlink" title="av_buffer_ref()"></a><strong>av_buffer_ref()</strong></h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">buffer_replace</span><span class="params">(AVBufferRef **dst, AVBufferRef **src)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    AVBuffer *b;</span><br><span class="line"></span><br><span class="line">    b = (*dst)-&gt;buffer;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (src) &#123;</span><br><span class="line">        **dst = **src;</span><br><span class="line">        av_freep(src);</span><br><span class="line">    &#125; <span class="keyword">else</span></span><br><span class="line">        av_freep(dst);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (atomic_fetch_sub_explicit(&amp;b-&gt;refcount, <span class="number">1</span>, memory_order_acq_rel) == <span class="number">1</span>) &#123;</span><br><span class="line">        b-&gt;<span class="built_in">free</span>(b-&gt;opaque, b-&gt;data);</span><br><span class="line">        av_freep(&amp;b);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">av_buffer_unref</span><span class="params">(AVBufferRef **buf)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (!buf || !*buf)</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">    buffer_replace(buf, <span class="literal">NULL</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;回收AVBufferRef **buf内存。将(*buf)-&gt;buffer的引用计数减1，若引用计数为0，则通过b-&gt;free(b-&gt;opaque, b-&gt;data)调用回调函数回收AVBuffer缓冲区内存。</p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>lucas wu
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="http://www.gpu-computing.cn/2020/11/25/ffmpeg%E7%BB%93%E6%9E%84%E4%BD%93%E5%88%86%E6%9E%90%E4%B9%8BAVBuffer/" title="ffmpeg结构体分析之AVBuffer">http://www.gpu-computing.cn/2020/11/25/ffmpeg结构体分析之AVBuffer/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/11/25/ffmpeg%E7%BB%93%E6%9E%84%E4%BD%93%E5%88%86%E6%9E%90%E4%B9%8BAVPacket/" rel="prev" title="ffmpeg结构体分析之AVPacket">
+      <i class="fa fa-chevron-left"></i> ffmpeg结构体分析之AVPacket
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/12/01/openssl%E4%B9%8BRSA%E5%8A%A0%E8%A7%A3%E5%AF%86/" rel="next" title="openssl之RSA加解密">
+      openssl之RSA加解密 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#AVBuffer%E7%BB%93%E6%9E%84%E4%BD%93"><span class="nav-number">1.</span> <span class="nav-text">AVBuffer结构体</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#AVBufferRef%E7%BB%93%E6%9E%84%E4%BD%93"><span class="nav-number">2.</span> <span class="nav-text">AVBufferRef结构体</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%9B%B8%E5%85%B3%E5%87%BD%E6%95%B0%E5%88%86%E6%9E%90"><span class="nav-number">3.</span> <span class="nav-text">相关函数分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#av-buffer-alloc"><span class="nav-number">3.1.</span> <span class="nav-text">av_buffer_alloc()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#av-buffer-create"><span class="nav-number">3.2.</span> <span class="nav-text">av_buffer_create()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#av-buffer-ref"><span class="nav-number">3.3.</span> <span class="nav-text">av_buffer_ref()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#av-buffer-ref-1"><span class="nav-number">3.4.</span> <span class="nav-text">av_buffer_ref()</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">lucas wu</p>
+  <div class="site-description" itemprop="description">长江的念念叨叨</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">14</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/lucaswu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;lucaswu" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:wcj0626@gmail.com" title="E-Mail → mailto:wcj0626@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="BbeiAn-info">
+    
+      <a target="_blank"  href="http://www.beian.miit.gov.cn/">浙ICP备17047146号</a>
+      </a>
+    </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('https://cdn.jsdelivr.net/npm/valine@1.4.14/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : false,
+      notify     : false,
+      appId      : 'ADi8KNpWgosz9eK2akEE59Rl-gzGzoHsz',
+      appKey     : 'OoPPJfW5ciHIjoVujpFjlIpx',
+      placeholder: "Just go go",
+      avatar     : 'mm',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : false,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

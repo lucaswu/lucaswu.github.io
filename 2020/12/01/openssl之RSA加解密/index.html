@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.gpu-computing.cn","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"valine","storage":true,"lazyload":false,"nav":null,"activeClass":"valine"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;OpenSSL不多介绍，RSA也不多介绍，这里就贴出公钥加密，私钥解密的分段加解密代码。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="openssl之RSA加解密">
+<meta property="og:url" content="http://www.gpu-computing.cn/2020/12/01/openssl%E4%B9%8BRSA%E5%8A%A0%E8%A7%A3%E5%AF%86/index.html">
+<meta property="og:site_name" content="长江的乱想">
+<meta property="og:description" content="&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;OpenSSL不多介绍，RSA也不多介绍，这里就贴出公钥加密，私钥解密的分段加解密代码。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-12-01T10:42:04.000Z">
+<meta property="article:modified_time" content="2021-01-12T05:15:08.448Z">
+<meta property="article:author" content="lucas wu">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://www.gpu-computing.cn/2020/12/01/openssl%E4%B9%8BRSA%E5%8A%A0%E8%A7%A3%E5%AF%86/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>openssl之RSA加解密 | 长江的乱想</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">长江的乱想</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">14</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://www.gpu-computing.cn/2020/12/01/openssl%E4%B9%8BRSA%E5%8A%A0%E8%A7%A3%E5%AF%86/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="lucas wu">
+      <meta itemprop="description" content="长江的念念叨叨">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="长江的乱想">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          openssl之RSA加解密
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-01 10:42:04" itemprop="dateCreated datePublished" datetime="2020-12-01T10:42:04Z">2020-12-01</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-01-12 05:15:08" itemprop="dateModified" datetime="2021-01-12T05:15:08Z">2021-01-12</time>
+              </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2020/12/01/openssl%E4%B9%8BRSA%E5%8A%A0%E8%A7%A3%E5%AF%86/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2020/12/01/openssl%E4%B9%8BRSA%E5%8A%A0%E8%A7%A3%E5%AF%86/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>5k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>5 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>&nbsp;&nbsp;&nbsp;&nbsp;OpenSSL不多介绍，RSA也不多介绍，这里就贴出公钥加密，私钥解密的分段加解密代码。    </p>
+<a id="more"></a>     
+<p>&nbsp;&nbsp;&nbsp;&nbsp; 特别说明的一点是RSA公钥和私钥的长度为1024，所以最对可以加密1024/8-11=117字节长度。代码如下：</p>
+<pre><code class="C">#include &lt;openssl/pem.h&gt;
+#include &lt;openssl/ssl.h&gt;
+#include &lt;openssl/rsa.h&gt;
+#include &lt;openssl/evp.h&gt;
+#include &lt;openssl/bio.h&gt;
+#include &lt;openssl/err.h&gt;
+#include &lt;openssl/buffer.h&gt;
+#include &lt;stdio.h&gt;
+
+const int PADDING = RSA_PKCS1_PADDING;
+RSA *createRSA(unsigned char *key, int public_token)
+&#123;
+    RSA *rsa = NULL;
+    BIO *keybio;
+    keybio = BIO_new_mem_buf(key, -1);
+    if (keybio == NULL)
+    &#123;
+        printf(&quot;Failed to create key BIO&quot;);
+        return 0;
+    &#125;
+    if (public_token)
+    &#123;
+        rsa = PEM_read_bio_RSA_PUBKEY(keybio, &amp;rsa, NULL, NULL);
+    &#125;
+    else
+    &#123;
+        rsa = PEM_read_bio_RSAPrivateKey(keybio, &amp;rsa, NULL, NULL);
+    &#125;
+    if (rsa == NULL)
+    &#123;
+        printf(&quot;Failed to create RSA&quot;);
+    &#125;
+
+    return rsa;
+&#125;
+
+int public_key_encrypt(unsigned char *data, int data_len, unsigned char *key, unsigned char *encrypted)
+&#123;
+    RSA *rsa = createRSA(key, 1);
+    if (NULL == rsa)
+    &#123;
+        return -1;
+    &#125;
+    size_t res = RSA_size(rsa);
+    int block_len = res - 11;
+
+    int pos = 0;
+
+
+
+    unsigned char* temp = (unsigned char*)malloc(res+1);
+    if (temp == NULL) &#123;
+        return -1;
+    &#125;
+
+    unsigned char* outData = (unsigned char*)malloc(res+1);
+    if (outData == NULL) &#123;
+        return -1;
+    &#125;
+
+    int totalSize = 0; 
+    while (pos &lt; data_len) &#123;
+        memset(temp, 0, res+1);
+        int size = min(block_len, data_len - pos);
+        memcpy(temp, data + pos, size);
+
+        memset(outData, 0, res+1);
+        int result = RSA_public_encrypt(strlen(temp), temp, outData, rsa, PADDING);
+        printf(&quot;%s\n&quot;,temp);
+        if (result &gt;  0) &#123;
+            memcpy(encrypted + totalSize, outData, result);
+            pos += block_len;
+
+            totalSize += result;
+        &#125;
+        else &#123;
+
+            free(temp);
+            free(outData);
+            return -1;
+        &#125;
+
+    &#125;
+
+    free(temp);
+    free(outData);
+    return totalSize;
+&#125;
+
+int private_key_decrypt(unsigned char *enc_data, int data_len, unsigned char *key, unsigned char *decrypted)
+&#123;
+    RSA *rsa = createRSA(key, 0);
+    if (NULL == rsa)
+    &#123;
+        return -1;
+    &#125;
+    size_t res = RSA_size(rsa);
+
+    int pos = 0;
+    int i = 0;
+    int totalSize = 0;
+
+    unsigned char* temp = (unsigned char*)malloc(res + 1);
+    if (temp == NULL) &#123;
+        return -1;
+    &#125;
+
+    unsigned char* outData = (unsigned char*)malloc(res + 1);
+    if (outData == NULL) &#123;
+        return -1;
+    &#125;
+    while (pos &lt; data_len) &#123;
+        memset(temp, 0, res + 1);
+        int size = min(res, data_len - pos);
+        memcpy(temp, enc_data + pos, size);
+
+        memset(outData, 0, res + 1);
+        int result = RSA_private_decrypt(strlen(temp), temp, outData, rsa, PADDING);
+
+        if (result &gt; 0) &#123;
+
+            memcpy(decrypted + totalSize, outData, result);
+            pos += res;
+
+            totalSize += result;
+
+            printf(&quot;%s\n&quot;, decrypted);
+        &#125;
+        else &#123;
+            return -1;
+        &#125;
+
+
+
+    &#125;
+
+    return totalSize;
+&#125;
+
+void ras_test()
+&#123;
+    unsigned char plainText[] = &quot;[oh-my-zsh] For safety, we will not load completions from these directories until[oh-my-zsh] you fix their permissions and ownership and restart zsh.oh-my-zsh] See the above list for directories with group or other writability.&quot;;
+
+    unsigned char publicKey[] = &quot;-----BEGIN PUBLIC KEY-----\n&quot;
+        &quot;MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCrPgCMJW17JN2DW7tZFk/FB6pU\n&quot;
+        &quot;pLvLOo6G/EuND8XZptffXbyiY2VscMRhP+kKVeaLO9HuEYR3Zl78x8oR6prytstc\n&quot;
+        &quot;/MueersWDxh4iGSHsZXGxA41hXrXLRElrSTRc43ea18o0zMxZoVZiR2JFt7QcgM+\n&quot;
+        &quot;T6eOrvj59MhXv9O46QIDAQAB\n&quot;
+        &quot;-----END PUBLIC KEY-----\n&quot;;
+
+    unsigned char privateKey[] = &quot;-----BEGIN RSA PRIVATE KEY-----\n&quot;
+        &quot;MIICdgIBADANBgkqhkiG9w0BAQEFAASCAmAwggJcAgEAAoGBAKs+AIwlbXsk3YNb\n&quot;
+        &quot;u1kWT8UHqlSku8s6job8S40Pxdmm199dvKJjZWxwxGE/6QpV5os70e4RhHdmXvzH\n&quot;
+        &quot;yhHqmvK2y1z8y556uxYPGHiIZIexlcbEDjWFetctESWtJNFzjd5rXyjTMzFmhVmJ\n&quot;
+        &quot;HYkW3tByAz5Pp46u+Pn0yFe/07jpAgMBAAECgYBj1YH8MtXhNVzveEuBZMCc3hsv\n&quot;
+        &quot;vdq+YSU3DV/+nXN7sQmp77xJ8CjxT80t5VS38dy2z+lUImJYOhamyNPGHkC2y84V\n&quot;
+        &quot;7i5+e6ScQve1gnwHqRKGBjtSCaYOqm9rTDECCTT1oMU26sfYznWlJqMrkJp1jWn7\n&quot;
+        &quot;aAwr+3FcX2XhD74ZAQJBAN34Y6fmHLRPv21MsdgGqUjKgyFvJfLUmtFFgb6sLEWc\n&quot;
+        &quot;k22J3BAFAcNCTLYHFZwMhL/nwaw9/7rIUJD+lcl6n3cCQQDFfrN14qKC3GJfoBZ8\n&quot;
+        &quot;k9S6F7Ss514DDPzIuenbafhoUjZDVcjLw9EmYZQjpfsQ3WdNICUKRrDHZay1Pz+s\n&quot;
+        &quot;YkKfAkB+OKfaquS5t/t/2LPsxuTuipIEqiKnMjSTOfYsidVnBEFlcZZc2awF76aV\n&quot;
+        &quot;f/PO1+OJCO2910ebXBtMSCi++GbDAkEAmc7zNPwsVH4OnyquWJdJNSUBMSd/sCCN\n&quot;
+        &quot;PkaMOrVtINHmMMq+dvMqEBoupRS/U4Ma0JYYQsiLJL+qof2AOWDNQQJAcquLGHLT\n&quot;
+        &quot;eGDDLluHo+kkIGwZi4aK/fDoylZ0NCEtYyMtShQ3JmllST9kmb9NJX2gMsejsirc\n&quot;
+        &quot;H6ObxqZPbka6UA==\n&quot;
+        &quot;-----END RSA PRIVATE KEY-----\n&quot;;
+
+    unsigned char encrypted_str[1024];
+    unsigned char decrypted_str[1024];
+
+
+    memset(encrypted_str, &#39;\0&#39;, sizeof(encrypted_str));
+    memset(decrypted_str, &#39;\0&#39;, sizeof(decrypted_str));
+
+    size_t len = strlen((const char *)plainText);
+    printf(&quot;Original string length =%d\n\n&quot;, len);
+
+    // 公钥加密
+    int encrypted_length = public_key_encrypt(plainText, len, publicKey, encrypted_str);
+    if (-1 == encrypted_length)
+    &#123;
+        printf(&quot;Private Encrypt failed\n&quot;);
+        exit(0);
+    &#125;
+    encrypted_str[encrypted_length] = &#39;\0&#39;;
+
+
+
+    // 私钥解密
+    int decrypted_length = private_key_decrypt(encrypted_str, encrypted_length, privateKey, decrypted_str);
+    if (-1 == decrypted_length)
+    &#123;
+        printf(&quot;Public Decrypt failed\n&quot;);
+        exit(0);
+    &#125;
+
+    printf(&quot;Decrypted Text =%s\n\n&quot;, decrypted_str);
+    printf(&quot;Decrypted Length =%d\n&quot;, decrypted_length);
+&#125;</code></pre>
+<p>代码<a target="_blank" rel="noopener" href="https://github.com/lucaswu/decrypt_encrypt">下载</a></p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>lucas wu
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="http://www.gpu-computing.cn/2020/12/01/openssl%E4%B9%8BRSA%E5%8A%A0%E8%A7%A3%E5%AF%86/" title="openssl之RSA加解密">http://www.gpu-computing.cn/2020/12/01/openssl之RSA加解密/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/11/25/ffmpeg%E7%BB%93%E6%9E%84%E4%BD%93%E5%88%86%E6%9E%90%E4%B9%8BAVBuffer/" rel="prev" title="ffmpeg结构体分析之AVBuffer">
+      <i class="fa fa-chevron-left"></i> ffmpeg结构体分析之AVBuffer
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/12/01/wincrypt%E4%B9%8BRSA%E8%A7%A3%E5%AF%86/" rel="next" title="wincrypt之RSA解密">
+      wincrypt之RSA解密 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">lucas wu</p>
+  <div class="site-description" itemprop="description">长江的念念叨叨</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">14</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/lucaswu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;lucaswu" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:wcj0626@gmail.com" title="E-Mail → mailto:wcj0626@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="BbeiAn-info">
+    
+      <a target="_blank"  href="http://www.beian.miit.gov.cn/">浙ICP备17047146号</a>
+      </a>
+    </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('https://cdn.jsdelivr.net/npm/valine@1.4.14/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : false,
+      notify     : false,
+      appId      : 'ADi8KNpWgosz9eK2akEE59Rl-gzGzoHsz',
+      appKey     : 'OoPPJfW5ciHIjoVujpFjlIpx',
+      placeholder: "Just go go",
+      avatar     : 'mm',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : false,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.gpu-computing.cn","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"valine","storage":true,"lazyload":false,"nav":null,"activeClass":"valine"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;AVFrame结构中在&lt;libavutil&#x2F;frame.h&gt;中定义，存储的是编码前或者解码后的原始数据，此外还包含了一些相关的信息。具体的定义如下：">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ffmpeg结构体分析之AVFrame">
+<meta property="og:url" content="http://www.gpu-computing.cn/2020/11/24/ffmpeg%E7%BB%93%E6%9E%84%E4%BD%93%E5%88%86%E6%9E%90%E4%B9%8BAVFrame/index.html">
+<meta property="og:site_name" content="长江的乱想">
+<meta property="og:description" content="&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;AVFrame结构中在&lt;libavutil&#x2F;frame.h&gt;中定义，存储的是编码前或者解码后的原始数据，此外还包含了一些相关的信息。具体的定义如下：">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-11-23T23:26:06.000Z">
+<meta property="article:modified_time" content="2020-12-01T02:29:22.799Z">
+<meta property="article:author" content="lucas wu">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://www.gpu-computing.cn/2020/11/24/ffmpeg%E7%BB%93%E6%9E%84%E4%BD%93%E5%88%86%E6%9E%90%E4%B9%8BAVFrame/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>ffmpeg结构体分析之AVFrame | 长江的乱想</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">长江的乱想</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">14</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://www.gpu-computing.cn/2020/11/24/ffmpeg%E7%BB%93%E6%9E%84%E4%BD%93%E5%88%86%E6%9E%90%E4%B9%8BAVFrame/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="lucas wu">
+      <meta itemprop="description" content="长江的念念叨叨">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="长江的乱想">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          ffmpeg结构体分析之AVFrame
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-11-23 23:26:06" itemprop="dateCreated datePublished" datetime="2020-11-23T23:26:06Z">2020-11-23</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-01 02:29:22" itemprop="dateModified" datetime="2020-12-01T02:29:22Z">2020-12-01</time>
+              </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2020/11/24/ffmpeg%E7%BB%93%E6%9E%84%E4%BD%93%E5%88%86%E6%9E%90%E4%B9%8BAVFrame/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2020/11/24/ffmpeg%E7%BB%93%E6%9E%84%E4%BD%93%E5%88%86%E6%9E%90%E4%B9%8BAVFrame/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>8.7k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>8 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>&nbsp;&nbsp;&nbsp;&nbsp;AVFrame结构中在&lt;libavutil/frame.h&gt;中定义，存储的是编码前或者解码后的原始数据，此外还包含了一些相关的信息。具体的定义如下：</p>
+<a id="more"></a>   
+<pre><code class="C">typedef struct AVFrame &#123;
+#define AV_NUM_DATA_POINTERS 8
+    /**
+     * pointer to the picture/channel planes.
+     * This might be different from the first allocated byte
+     *
+     * Some decoders access areas outside 0,0 - width,height, please
+     * see avcodec_align_dimensions2(). Some filters and swscale can read
+     * up to 16 bytes beyond the planes, if these filters are to be used,
+     * then 16 extra bytes must be allocated.
+     *
+     * NOTE: Except for hwaccel formats, pointers not needed by the format
+     * MUST be set to NULL.
+     */
+    uint8_t *data[AV_NUM_DATA_POINTERS];
+
+    /**
+     * For video, size in bytes of each picture line.
+     * For audio, size in bytes of each plane.
+     *
+     * For audio, only linesize[0] may be set. For planar audio, each channel
+     * plane must be the same size.
+     *
+     * For video the linesizes should be multiples of the CPUs alignment
+     * preference, this is 16 or 32 for modern desktop CPUs.
+     * Some code requires such alignment other code can be slower without
+     * correct alignment, for yet other it makes no difference.
+     *
+     * @note The linesize may be larger than the size of usable data -- there
+     * may be extra padding present for performance reasons.
+     */
+    int linesize[AV_NUM_DATA_POINTERS];
+
+    /**
+     * pointers to the data planes/channels.
+     *
+     * For video, this should simply point to data[].
+     *
+     * For planar audio, each channel has a separate data pointer, and
+     * linesize[0] contains the size of each channel buffer.
+     * For packed audio, there is just one data pointer, and linesize[0]
+     * contains the total size of the buffer for all channels.
+     *
+     * Note: Both data and extended_data should always be set in a valid frame,
+     * but for planar audio with more channels that can fit in data,
+     * extended_data must be used in order to access all channels.
+     */
+    uint8_t **extended_data;
+
+    /**
+     * @name Video dimensions
+     * Video frames only. The coded dimensions (in pixels) of the video frame,
+     * i.e. the size of the rectangle that contains some well-defined values.
+     *
+     * @note The part of the frame intended for display/presentation is further
+     * restricted by the @ref cropping &quot;Cropping rectangle&quot;.
+     * @&#123;
+     */
+    int width, height;
+    /**
+     * @&#125;
+     */
+
+    /**
+     * number of audio samples (per channel) described by this frame
+     */
+    int nb_samples;
+
+    /**
+     * format of the frame, -1 if unknown or unset
+     * Values correspond to enum AVPixelFormat for video frames,
+     * enum AVSampleFormat for audio)
+     */
+    int format;
+
+    /**
+     * 1 -&gt; keyframe, 0-&gt; not
+     */
+    int key_frame;
+
+    /**
+     * Picture type of the frame.
+     */
+    enum AVPictureType pict_type;
+
+    /**
+     * Sample aspect ratio for the video frame, 0/1 if unknown/unspecified.
+     */
+    AVRational sample_aspect_ratio;
+
+    /**
+     * Presentation timestamp in time_base units (time when frame should be shown to user).
+     */
+    int64_t pts;
+
+#if FF_API_PKT_PTS
+    /**
+     * PTS copied from the AVPacket that was decoded to produce this frame.
+     * @deprecated use the pts field instead
+     */
+    attribute_deprecated
+    int64_t pkt_pts;
+#endif
+
+    /**
+     * DTS copied from the AVPacket that triggered returning this frame. (if frame threading isn&#39;t used)
+     * This is also the Presentation time of this AVFrame calculated from
+     * only AVPacket.dts values without pts values.
+     */
+    int64_t pkt_dts;
+
+    /**
+     * picture number in bitstream order
+     */
+    int coded_picture_number;
+    /**
+     * picture number in display order
+     */
+    int display_picture_number;
+
+    /**
+     * quality (between 1 (good) and FF_LAMBDA_MAX (bad))
+     */
+    int quality;
+
+    /**
+     * for some private data of the user
+     */
+    void *opaque;
+
+#if FF_API_ERROR_FRAME
+    /**
+     * @deprecated unused
+     */
+    attribute_deprecated
+    uint64_t error[AV_NUM_DATA_POINTERS];
+#endif
+
+    /**
+     * When decoding, this signals how much the picture must be delayed.
+     * extra_delay = repeat_pict / (2*fps)
+     */
+    int repeat_pict;
+
+    /**
+     * The content of the picture is interlaced.
+     */
+    int interlaced_frame;
+
+    /**
+     * If the content is interlaced, is top field displayed first.
+     */
+    int top_field_first;
+
+    /**
+     * Tell user application that palette has changed from previous frame.
+     */
+    int palette_has_changed;
+
+    /**
+     * reordered opaque 64 bits (generally an integer or a double precision float
+     * PTS but can be anything).
+     * The user sets AVCodecContext.reordered_opaque to represent the input at
+     * that time,
+     * the decoder reorders values as needed and sets AVFrame.reordered_opaque
+     * to exactly one of the values provided by the user through AVCodecContext.reordered_opaque
+     */
+    int64_t reordered_opaque;
+
+    /**
+     * Sample rate of the audio data.
+     */
+    int sample_rate;
+
+    /**
+     * Channel layout of the audio data.
+     */
+    uint64_t channel_layout;
+
+    /**
+     * AVBuffer references backing the data for this frame. If all elements of
+     * this array are NULL, then this frame is not reference counted. This array
+     * must be filled contiguously -- if buf[i] is non-NULL then buf[j] must
+     * also be non-NULL for all j &lt; i.
+     *
+     * There may be at most one AVBuffer per data plane, so for video this array
+     * always contains all the references. For planar audio with more than
+     * AV_NUM_DATA_POINTERS channels, there may be more buffers than can fit in
+     * this array. Then the extra AVBufferRef pointers are stored in the
+     * extended_buf array.
+     */
+    AVBufferRef *buf[AV_NUM_DATA_POINTERS];
+
+    /**
+     * For planar audio which requires more than AV_NUM_DATA_POINTERS
+     * AVBufferRef pointers, this array will hold all the references which
+     * cannot fit into AVFrame.buf.
+     *
+     * Note that this is different from AVFrame.extended_data, which always
+     * contains all the pointers. This array only contains the extra pointers,
+     * which cannot fit into AVFrame.buf.
+     *
+     * This array is always allocated using av_malloc() by whoever constructs
+     * the frame. It is freed in av_frame_unref().
+     */
+    AVBufferRef **extended_buf;
+    /**
+     * Number of elements in extended_buf.
+     */
+    int        nb_extended_buf;
+
+    AVFrameSideData **side_data;
+    int            nb_side_data;
+
+/**
+ * @defgroup lavu_frame_flags AV_FRAME_FLAGS
+ * @ingroup lavu_frame
+ * Flags describing additional frame properties.
+ *
+ * @&#123;
+ */
+
+/**
+ * The frame data may be corrupted, e.g. due to decoding errors.
+ */
+#define AV_FRAME_FLAG_CORRUPT       (1 &lt;&lt; 0)
+/**
+ * A flag to mark the frames which need to be decoded, but shouldn&#39;t be output.
+ */
+#define AV_FRAME_FLAG_DISCARD   (1 &lt;&lt; 2)
+/**
+ * @&#125;
+ */
+
+    /**
+     * Frame flags, a combination of @ref lavu_frame_flags
+     */
+    int flags;
+
+    /**
+     * MPEG vs JPEG YUV range.
+     * - encoding: Set by user
+     * - decoding: Set by libavcodec
+     */
+    enum AVColorRange color_range;
+
+    enum AVColorPrimaries color_primaries;
+
+    enum AVColorTransferCharacteristic color_trc;
+
+    /**
+     * YUV colorspace type.
+     * - encoding: Set by user
+     * - decoding: Set by libavcodec
+     */
+    enum AVColorSpace colorspace;
+
+    enum AVChromaLocation chroma_location;
+
+    /**
+     * frame timestamp estimated using various heuristics, in stream time base
+     * - encoding: unused
+     * - decoding: set by libavcodec, read by user.
+     */
+    int64_t best_effort_timestamp;
+
+    /**
+     * reordered pos from the last AVPacket that has been input into the decoder
+     * - encoding: unused
+     * - decoding: Read by user.
+     */
+    int64_t pkt_pos;
+
+    /**
+     * duration of the corresponding packet, expressed in
+     * AVStream-&gt;time_base units, 0 if unknown.
+     * - encoding: unused
+     * - decoding: Read by user.
+     */
+    int64_t pkt_duration;
+
+    /**
+     * metadata.
+     * - encoding: Set by user.
+     * - decoding: Set by libavcodec.
+     */
+    AVDictionary *metadata;
+
+    /**
+     * decode error flags of the frame, set to a combination of
+     * FF_DECODE_ERROR_xxx flags if the decoder produced a frame, but there
+     * were errors during the decoding.
+     * - encoding: unused
+     * - decoding: set by libavcodec, read by user.
+     */
+    int decode_error_flags;
+#define FF_DECODE_ERROR_INVALID_BITSTREAM   1
+#define FF_DECODE_ERROR_MISSING_REFERENCE   2
+#define FF_DECODE_ERROR_CONCEALMENT_ACTIVE  4
+#define FF_DECODE_ERROR_DECODE_SLICES       8
+
+    /**
+     * number of audio channels, only used for audio.
+     * - encoding: unused
+     * - decoding: Read by user.
+     */
+    int channels;
+
+    /**
+     * size of the corresponding packet containing the compressed
+     * frame.
+     * It is set to a negative value if unknown.
+     * - encoding: unused
+     * - decoding: set by libavcodec, read by user.
+     */
+    int pkt_size;
+
+#if FF_API_FRAME_QP
+    /**
+     * QP table
+     */
+    attribute_deprecated
+    int8_t *qscale_table;
+    /**
+     * QP store stride
+     */
+    attribute_deprecated
+    int qstride;
+
+    attribute_deprecated
+    int qscale_type;
+
+    attribute_deprecated
+    AVBufferRef *qp_table_buf;
+#endif
+    /**
+     * For hwaccel-format frames, this should be a reference to the
+     * AVHWFramesContext describing the frame.
+     */
+    AVBufferRef *hw_frames_ctx;
+
+    /**
+     * AVBufferRef for free use by the API user. FFmpeg will never check the
+     * contents of the buffer ref. FFmpeg calls av_buffer_unref() on it when
+     * the frame is unreferenced. av_frame_copy_props() calls create a new
+     * reference with av_buffer_ref() for the target frame&#39;s opaque_ref field.
+     *
+     * This is unrelated to the opaque field, although it serves a similar
+     * purpose.
+     */
+    AVBufferRef *opaque_ref;
+
+    /**
+     * @anchor cropping
+     * @name Cropping
+     * Video frames only. The number of pixels to discard from the the
+     * top/bottom/left/right border of the frame to obtain the sub-rectangle of
+     * the frame intended for presentation.
+     * @&#123;
+     */
+    size_t crop_top;
+    size_t crop_bottom;
+    size_t crop_left;
+    size_t crop_right;
+    /**
+     * @&#125;
+     */
+
+    /**
+     * AVBufferRef for internal use by a single libav* library.
+     * Must not be used to transfer data between libraries.
+     * Has to be NULL when ownership of the frame leaves the respective library.
+     *
+     * Code outside the FFmpeg libs should never check or change the contents of the buffer ref.
+     *
+     * FFmpeg calls av_buffer_unref() on it when the frame is unreferenced.
+     * av_frame_copy_props() calls create a new reference with av_buffer_ref()
+     * for the target frame&#39;s private_ref field.
+     */
+    AVBufferRef *private_ref;
+&#125; AVFrame;
+</code></pre>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;挑一些重点的解释下：    </p>
+<ol>
+<li>data[AV_NUM_DATA_POINTERS]: 数组中的每个元素是指针，指向图像中的某个plane或者音频某个声道plane。</li>
+<li>linesize[AV_NUM_DATA_POINTERS]: 对于视频，linesize是每个plane图像的每行大小，注意有对齐要求。对于音频来说，lineze是每个plane的大小，同样也是注意对齐要求。</li>
+<li>width、height: 视频宽高</li>
+<li>nb_sample: 音频中单个声道中包含的采样点数</li>
+<li>format: 帧格式。对于视频，对应AVPixelFormat中定义的格式；对于音频，对应AVSampleFormat中定义的格式。</li>
+<li>key_format: 视频帧是否是关键帧的标识：1-&gt;关键帧；0-&gt;非关键帧</li>
+<li>pict_type: 视频帧类型，对应AVPictureType中定义的格式</li>
+<li>sample_aspect_ratio: 视频帧的宽高比</li>
+<li>pts: 显示时间戳</li>
+<li>pkt_pts: 此帧对应的packet中的显示时间戳。</li>
+<li>pkt_dst: 此帧对应的packet中的解码时间戳。</li>
+<li>coded_picture_number: 在编码流中当前图像的序号</li>
+<li>display_picture_number: 在显示序列中当前图像的序号</li>
+<li>interlaced_frame: 图像逐行/隔行模式标识。</li>
+<li>pkt_duration: 对应packet的时长</li>
+<li>channels: 音频声道数量</li>
+<li>pkt_size: 对应packet的大小</li>
+<li>crop_*: 视频帧图像的裁切</li>
+</ol>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>lucas wu
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="http://www.gpu-computing.cn/2020/11/24/ffmpeg%E7%BB%93%E6%9E%84%E4%BD%93%E5%88%86%E6%9E%90%E4%B9%8BAVFrame/" title="ffmpeg结构体分析之AVFrame">http://www.gpu-computing.cn/2020/11/24/ffmpeg结构体分析之AVFrame/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/11/18/ffmpeg%E5%87%BD%E6%95%B0%E5%88%86%E6%9E%90%E4%B9%8Bavcodec-open2/" rel="prev" title="ffmpeg函数分析之avcodec_open2">
+      <i class="fa fa-chevron-left"></i> ffmpeg函数分析之avcodec_open2
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/11/25/ffmpeg%E7%BB%93%E6%9E%84%E4%BD%93%E5%88%86%E6%9E%90%E4%B9%8BAVPacket/" rel="next" title="ffmpeg结构体分析之AVPacket">
+      ffmpeg结构体分析之AVPacket <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">lucas wu</p>
+  <div class="site-description" itemprop="description">长江的念念叨叨</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">14</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/lucaswu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;lucaswu" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:wcj0626@gmail.com" title="E-Mail → mailto:wcj0626@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="BbeiAn-info">
+    
+      <a target="_blank"  href="http://www.beian.miit.gov.cn/">浙ICP备17047146号</a>
+      </a>
+    </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('https://cdn.jsdelivr.net/npm/valine@1.4.14/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : false,
+      notify     : false,
+      appId      : 'ADi8KNpWgosz9eK2akEE59Rl-gzGzoHsz',
+      appKey     : 'OoPPJfW5ciHIjoVujpFjlIpx',
+      placeholder: "Just go go",
+      avatar     : 'mm',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : false,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>
