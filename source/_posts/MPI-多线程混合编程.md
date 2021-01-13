@@ -21,4 +21,4 @@ MPI_Init_thread(&argc,&argv, MPI_THREAD_MULTIPLE, &mpisupport);
 if (mpi_support != MPI_THREAD_MULTIPLE)
     printf(”MPI_THREAD_MULTIPLE thread support required\n”);
 ```    
- &nbsp;&nbsp;&nbsp;&nbsp; 需要注意的是，如果只是调用MPI_Init函数来初始化，则是假定MPI_THREAD_SINGLE级别。对于MPI多线程函数，需要使用MPI_Init_thread来初始化，这是很多人一开始没注意的问题。
+ &nbsp;&nbsp;&nbsp;&nbsp; 需要注意的是，如果只是调用MPI_Init函数来初始化，则是假定MPI_THREAD_SINGLE级别。对于MPI多线程混合编程，需要使用MPI_Init_thread来初始化，这是很多人一开始没注意的问题。

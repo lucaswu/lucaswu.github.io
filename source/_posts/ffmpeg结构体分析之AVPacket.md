@@ -4,6 +4,7 @@ date: 2020-11-24 23:46:06
 tags:
 ---
 &nbsp;&nbsp;&nbsp;&nbsp;AVPacket结构体定义在<libavcodec/packet.h>中，存储的是经过编码的压缩数据。具体的定义如下:
+<!--more-->  
 ```C
 typedef struct AVPacket {
     /**

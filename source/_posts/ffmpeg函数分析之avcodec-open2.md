@@ -4,13 +4,14 @@ date: 2020-11-18 00:19:37
 tags:
 ---
 &nbsp;&nbsp;&nbsp;&nbsp;avcodec_open2 用于初始化的音视频编解码器AVCodecContext，声明位于 libavcodec\utils.c 中，函数原型如下：
+<!--more-->  
 ```C
 int  avcodec_open2(AVCodecContext *avctx, const AVCodec *codec, AVDictionary **options)
 ```    
 - avctx：需要初始化的 AVCodecContext    
 - codec：输入的AVCodec
 - options：包含AVCodecContext和编解码器专用的字典
-<!--more-->  
+
 &nbsp;&nbsp;&nbsp;&nbsp;我们就具体看下这个函数的实现，代码很长，我就直接把贴出来，代码里加上自己理解的注释    
 
 ```c
