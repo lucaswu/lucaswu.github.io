@@ -5,7 +5,7 @@ tags:
 ---
 &nbsp;&nbsp;&nbsp;&nbsp;工作上遇到一些数据库的问题，现在把使用MySQL的问题都记录下来。~~(遥想上一次写SQL语句，还是2007-2008年间，用着SQL server 2005)~~    
 <!--more-->     
-&nbsp;&nbsp;&nbsp;&nbsp;**1.创建的用户没办法创建数据库**    
+### 创建的用户没办法创建数据库    
 ```SQL
 CREATE USER 'pig'@'%' IDENTIFIED BY '123456';
 ```
@@ -81,3 +81,32 @@ mysql> show grants;
 mysql> create database pig_db;
 Query OK, 1 row affected (0.00 sec)
 ```
+
+### 开启日志记录查询  
+ #### 查询日志功能是否开启 
+ ```SQL
+ mysql> show variables like 'general%';
++------------------+------------------------------------+
+| Variable_name    | Value                              |
++------------------+------------------------------------+
+| general_log      | OFF                                |
+| general_log_file | /usr/local/mysql/data/macdeMBP.log |
++------------------+------------------------------------+
+2 rows in set (0.01 sec)
+ ```
+ &nbsp;&nbsp;&nbsp;&nbsp;可以看到general_logmore默认是是OFF，也就是关闭日志功能的。日志文件保存的路径在general_log_file中
+
+#### 开启日志
+ ```SQL
+ mysql> set global general_log='ON';
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> show variables like 'general%';
++------------------+------------------------------------+
+| Variable_name    | Value                              |
++------------------+------------------------------------+
+| general_log      | ON                                 |
+| general_log_file | /usr/local/mysql/data/macdeMBP.log |
++------------------+------------------------------------+
+2 rows in set (0.01 sec)
+ ```
