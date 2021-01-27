@@ -110,3 +110,26 @@ mysql> show variables like 'general%';
 +------------------+------------------------------------+
 2 rows in set (0.01 sec)
  ```
+
+ ### mysqldump导出数据
+ #### 导出数据操作
+ 数据导出：
+ ```SQL
+ mysqldump -u'test' -p'test' -P3306 db1 table1 > dump.txt
+ ```
+ 数据导入:    
+ &nbsp;&nbsp;&nbsp;&nbsp;连接数据库，然后执行：
+ ```SQL
+ mysql> source dump.txt
+ ```
+ #### 导出遇到的问题
+##### 问题一
+ ```SQL
+mysqldump -u'test' -p'test'   -P3306   --all-databases > all_database_sql
+mysqldump: [Warning] Using a password on the command line interface can be insecure.
+mysqldump: Error: 'Access denied; you need (at least one of) the PROCESS privilege(s) for this operation' when trying to dump tablespaces
+ ```
+ 解决办法：
+ ```SQL
+ mysqldump -u'test' -p'test'   -P3306  --no-tablespaces  --all-databases > all_database_sql
+ ```
